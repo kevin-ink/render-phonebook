@@ -68,7 +68,7 @@ const App = () => {
     <div>
       <h2>Phonebook</h2>
       <div>
-        filter shown with
+        filter shown with{" "}
         <input
           onChange={(e) => setFilterByName(e.target.value)}
           value={filterByName}
