@@ -53,11 +53,16 @@ const App = () => {
       return;
     }
 
-    personsService.create(newPerson).then((res) => {
-      setPersons(persons.concat(res.data));
-      setNewName("");
-      setNewNumber("");
-    });
+    personsService
+      .create(newPerson)
+      .then((res) => {
+        setPersons(persons.concat(res.data));
+        setNewName("");
+        setNewNumber("");
+      })
+      .catch((error) => {
+        console.log(error.response.data.error);
+      });
   };
 
   const filteredPersons = persons.filter((person) =>
