@@ -52,20 +52,17 @@ personsRouter.post('/', async (request, response) => {
 })
 
 // UPDATE
-personsRouter.put('/:id', (request, response) => {
+personsRouter.put('/:id', async (request, response) => {
   const { number } = request.body
 
-  Person.findById(request.params.id).then((person) => {
-    if (!person) {
-      return response.status(404).end()
-    }
+  let foundPerson = await Person.findById(request.params.id)
+  if (!foundPerson) {
+    return response.status(404).end()
+  }
 
-    person.number = number
-
-    return person.save().then((updatedPerson) => {
-      response.json(updatedPerson)
-    })
-  })
+  foundPerson.number = number
+  const updatedPerson = await foundPerson.save()
+  response.json(updatedPerson)
 })
 
 module.exports = personsRouter

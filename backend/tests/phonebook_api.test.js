@@ -93,3 +93,20 @@ test('a specific person can be deleted', async () => {
 
   assert.strictEqual(personsAtEnd.length, helper.initialPersons.length - 1)
 })
+
+test('a person can be updated', async () => {
+  const personsAtStart = await helper.personsInDb()
+  const personToUpdate = personsAtStart[0]
+
+  const updatedPersonData = {
+    number: '999-888777',
+  }
+
+  const updatedPerson = await api
+    .put(`/api/persons/${personToUpdate.id}`)
+    .send(updatedPersonData)
+    .expect(200)
+    .expect('Content-Type', /application\/json/)
+
+  assert.strictEqual(updatedPerson.body.number, updatedPersonData.number)
+})
