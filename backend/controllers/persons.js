@@ -1,5 +1,6 @@
 const personsRouter = require('express').Router()
 const Person = require('../models/person')
+const User = require('../models/user')
 
 //
 // ROUTES
@@ -7,7 +8,10 @@ const Person = require('../models/person')
 
 // GET ALL PERSONS
 personsRouter.get('/', async (request, response) => {
-  const persons = await Person.find({})
+  const persons = await Person.find({}).populate('user', {
+    username: 1,
+    name: 1,
+  })
   response.json(persons)
 })
 
@@ -42,12 +46,21 @@ personsRouter.delete('/:id', async (request, response) => {
 personsRouter.post('/', async (request, response) => {
   const body = request.body
 
+  const user = await User.findById(body.userId)
+
+  if (!user) {
+    return response.status(400).json({ error: 'userId missing or not valid' })
+  }
+
   const person = new Person({
     name: body.name,
     number: body.number,
+    user: user._id,
   })
 
   const savedPerson = await person.save()
+  user.phonebook = user.phonebook.concat(savedPerson._id)
+  await user.save()
   response.status(201).json(savedPerson)
 })
 
