@@ -6,10 +6,9 @@ const Person = require('../models/person')
 //
 
 // GET ALL PERSONS
-personsRouter.get('/', (request, response) => {
-  Person.find({}).then((persons) => {
-    response.json(persons)
-  })
+personsRouter.get('/', async (request, response) => {
+  const persons = await Person.find({})
+  response.json(persons)
 })
 
 // // GET NUMBER OF PEOPLE IN PHONEBOOK AND REQUEST DATE
@@ -22,48 +21,34 @@ personsRouter.get('/', (request, response) => {
 // })
 
 // GET PERSON BY ID
-personsRouter.get('/:id', (request, response, next) => {
-  Person.findById(request.params.id)
-    .then((person) => {
-      if (person) {
-        response.json(person)
-      } else {
-        response.status(404).end()
-      }
-    })
-    .catch((error) => {
-      next(error)
-    })
+personsRouter.get('/:id', async (request, response) => {
+  const foundPerson = await Person.findById(request.params.id)
+
+  if (foundPerson) {
+    response.json(foundPerson)
+  } else {
+    response.status(404).end()
+  }
 })
 
 // DELETE PERSON
-personsRouter.delete('/:id', (request, response, next) => {
-  Person.findByIdAndDelete(request.params.id)
-    .then(() => {
-      response.status(204).end()
-    })
-    .catch((error) => next(error))
+personsRouter.delete('/:id', async (request, response) => {
+  await Person.findByIdAndDelete(request.params.id)
+
+  response.status(204).end()
 })
 
 // ADD PERSON
-personsRouter.post('/', (request, response, next) => {
-  const { name, number } = request.body
-
-  if (!name || !number) {
-    return response.status(400).json({ error: 'name or number is missing' })
-  }
+personsRouter.post('/', async (request, response) => {
+  const body = request.body
 
   const person = new Person({
-    name: name,
-    number: number,
+    name: body.name,
+    number: body.number,
   })
 
-  person
-    .save()
-    .then((savedPerson) => {
-      response.json(savedPerson)
-    })
-    .catch((error) => next(error))
+  const savedPerson = await person.save()
+  response.status(201).json(savedPerson)
 })
 
 // UPDATE
