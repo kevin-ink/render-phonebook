@@ -12,6 +12,24 @@ const initialPersons = [
   },
 ]
 
+const user = {
+  username: 'testuser',
+  password: 'password',
+}
+
+const loginAndGetToken = async (api) => {
+  await api.post('/api/users').send(user)
+
+  const res = await api.post('/api/login').send(user)
+
+  const savedUser = await User.findOne({ username: user.username })
+
+  return {
+    token: res.body.token,
+    user: savedUser,
+  }
+}
+
 const usersInDb = async () => {
   const users = await User.find({})
   return users.map((user) => user.toJSON())
@@ -38,4 +56,5 @@ module.exports = {
   // nonExistingId,
   personsInDb,
   usersInDb,
+  loginAndGetToken,
 }

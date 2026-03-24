@@ -1,15 +1,6 @@
 const personsRouter = require('express').Router()
 const Person = require('../models/person')
-const User = require('../models/user')
-const jwt = require('jsonwebtoken')
-
-const getTokenFrom = (request) => {
-  const authorization = request.get('authorization')
-  if (authorization && authorization.startsWith('Bearer ')) {
-    return authorization.replace('Bearer ', '')
-  }
-  return null
-}
+const middleware = require('../utils/middleware')
 
 //
 // ROUTES
@@ -24,15 +15,6 @@ personsRouter.get('/', async (request, response) => {
   response.json(persons)
 })
 
-// // GET NUMBER OF PEOPLE IN PHONEBOOK AND REQUEST DATE
-// app.get('/info', (request, response) => {
-//   Person.find({}).then((persons) => {
-//     response.send(
-//       `<p>Phonebook has info for ${persons.length} people</p><p>${new Date()}</p>`,
-//     )
-//   })
-// })
-
 // GET PERSON BY ID
 personsRouter.get('/:id', async (request, response) => {
   const foundPerson = await Person.findById(request.params.id)
@@ -45,24 +27,37 @@ personsRouter.get('/:id', async (request, response) => {
 })
 
 // DELETE PERSON
-personsRouter.delete('/:id', async (request, response) => {
-  await Person.findByIdAndDelete(request.params.id)
+personsRouter.delete(
+  '/:id',
+  middleware.authExtractor,
+  async (request, response) => {
+    const user = request.user
+    const personToDelete = await Person.findById(request.params.id)
 
-  response.status(204).end()
-})
+    if (!personToDelete) {
+      return response.status(404).json({ error: 'Person not found' })
+    }
+
+    if (personToDelete.user.toString() !== user._id.toString()) {
+      return response
+        .status(403)
+        .json({ error: 'You do not have permission to delete this person' })
+    }
+
+    await Person.findByIdAndDelete(request.params.id)
+    user.phonebook = user.phonebook.filter(
+      (p) => p.toString() !== request.params.id,
+    )
+
+    await user.save()
+    response.status(204).end()
+  },
+)
 
 // ADD PERSON
-personsRouter.post('/', async (request, response) => {
+personsRouter.post('/', middleware.authExtractor, async (request, response) => {
   const body = request.body
-  const decodedToken = jwt.verify(getTokenFrom(request), process.env.SECRET)
-  if (!decodedToken.id) {
-    return response.status(401).json({ error: 'token invalid' })
-  }
-  const user = await User.findById(decodedToken.id)
-
-  if (!user) {
-    return response.status(400).json({ error: 'userId missing or not valid' })
-  }
+  const user = request.user
 
   const person = new Person({
     name: body.name,
@@ -77,17 +72,37 @@ personsRouter.post('/', async (request, response) => {
 })
 
 // UPDATE
-personsRouter.put('/:id', async (request, response) => {
-  const { number } = request.body
+personsRouter.put(
+  '/:id',
+  middleware.authExtractor,
+  async (request, response) => {
+    const user = request.user
+    const { number } = request.body
 
-  let foundPerson = await Person.findById(request.params.id)
-  if (!foundPerson) {
-    return response.status(404).end()
-  }
+    let foundPerson = await Person.findById(request.params.id)
+    if (!foundPerson) {
+      return response.status(404).end()
+    }
 
-  foundPerson.number = number
-  const updatedPerson = await foundPerson.save()
-  response.json(updatedPerson)
-})
+    if (foundPerson.user.toString() !== user._id.toString()) {
+      return response
+        .status(403)
+        .json({ error: 'You do not have permission to update this person' })
+    }
+
+    foundPerson.number = number
+    const updatedPerson = await foundPerson.save()
+    response.json(updatedPerson)
+  },
+)
 
 module.exports = personsRouter
+
+// // GET NUMBER OF PEOPLE IN PHONEBOOK AND REQUEST DATE
+// app.get('/info', (request, response) => {
+//   Person.find({}).then((persons) => {
+//     response.send(
+//       `<p>Phonebook has info for ${persons.length} people</p><p>${new Date()}</p>`,
+//     )
+//   })
+// })
