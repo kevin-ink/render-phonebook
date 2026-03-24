@@ -102,6 +102,54 @@ describe('testing token authentication', () => {
     assert.strictEqual(personsAtEnd.length, helper.initialPersons.length)
   })
 
+  test('updating a person succeeds with valid token', async () => {
+    const personsAtStart = await helper.personsInDb()
+    const personToUpdate = personsAtStart[0]
+
+    const updatedData = {
+      name: personToUpdate.name,
+      number: '999-9999999',
+    }
+
+    await api
+      .put(`/api/persons/${personToUpdate.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(updatedData)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+    const personsAtEnd = await helper.personsInDb()
+    const updatedPerson = personsAtEnd.find((p) => p.id === personToUpdate.id)
+    assert.strictEqual(updatedPerson.number, updatedData.number)
+  })
+
+  test('updating a person fails with 403 if user does not own the person', async () => {
+    const newUser = {
+      username: 'anotheruser',
+      password: 'password456',
+    }
+    await api.post('/api/users').send(newUser)
+
+    const loginRes = await api.post('/api/login').send(newUser)
+    const otherToken = loginRes.body.token
+
+    const personsAtStart = await helper.personsInDb()
+    const personToUpdate = personsAtStart[0]
+
+    const updatedData = {
+      name: personToUpdate.name,
+      number: '888-8888888',
+    }
+    await api
+      .put(`/api/persons/${personToUpdate.id}`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send(updatedData)
+      .expect(403)
+
+    const personsAtEnd = await helper.personsInDb()
+    const unchangedPerson = personsAtEnd.find((p) => p.id === personToUpdate.id)
+    assert.strictEqual(unchangedPerson.number, personToUpdate.number)
+  })
+
   after(async () => {
     await User.deleteMany({})
     await Person.deleteMany({})
