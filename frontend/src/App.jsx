@@ -22,7 +22,7 @@ const App = () => {
 
   useEffect(() => {
     personService.getAll().then((res) => {
-      setPersons(res.data)
+      setPersons(res)
     })
   }, [])
 
@@ -42,7 +42,7 @@ const App = () => {
     } catch {
       setErrorMessage('wrong credentials')
       setTimeout(() => {
-        setErrorMessage(null)
+        setErrorMessage('')
       }, 5000)
     }
   }
@@ -74,9 +74,7 @@ const App = () => {
         )
       ) {
         personService.update(existingPerson.id, newPerson).then((res) => {
-          setPersons(
-            persons.map((p) => (p.id !== existingPerson.id ? p : res.data)),
-          )
+          setPersons(persons.map((p) => (p.id !== existingPerson.id ? p : res)))
           setNewName('')
           setNewNumber('')
         })
@@ -90,12 +88,16 @@ const App = () => {
     personService
       .create(newPerson)
       .then((res) => {
-        setPersons(persons.concat(res.data))
+        setPersons(persons.concat(res))
         setNewName('')
         setNewNumber('')
       })
       .catch((error) => {
         console.log(error.response.data.error)
+        setErrorMessage('failed to create person: ' + error.response.data.error)
+        setTimeout(() => {
+          setErrorMessage('')
+        }, 5000)
       })
   }
 
@@ -190,9 +192,9 @@ const App = () => {
           value={filterByName}
         />
       </div>
-      {filteredPersons.map((person, i) => {
+      {filteredPersons.map((person) => {
         return (
-          <div key={i}>
+          <div key={person.id}>
             {person.name} {person.number}{' '}
             <button onClick={() => handleDeletePerson(person.id, person.name)}>
               delete
