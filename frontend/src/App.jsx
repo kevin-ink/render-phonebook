@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import personService from './services/person'
 import loginService from './services/login'
+import Person from './components/Person'
+import LoginForm from './components/LoginForm'
+import AddPersonForm from './components/AddPersonForm'
 
 const App = () => {
   const [persons, setPersons] = useState([])
-  const [newName, setNewName] = useState('')
-  const [newNumber, setNewNumber] = useState('')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [user, setUser] = useState(() => {
     const loggedUserJSON = window.localStorage.getItem('loggedPhonebookAppUser')
@@ -26,9 +25,7 @@ const App = () => {
     })
   }, [])
 
-  const handleLogin = async (e) => {
-    e.preventDefault()
-
+  const handleLogin = async (username, password) => {
     try {
       const user = await loginService.login({ username, password })
       window.localStorage.setItem(
@@ -37,8 +34,6 @@ const App = () => {
       )
       personService.setToken(user.token)
       setUser(user)
-      setUsername('')
-      setPassword('')
     } catch {
       setErrorMessage('wrong credentials')
       setTimeout(() => {
@@ -47,41 +42,34 @@ const App = () => {
     }
   }
 
-  const handleDeletePerson = (id, name) => {
-    if (window.confirm(`Delete ${name}?`)) {
-      personService.remove(id).then(() => {
-        setPersons((prev) => prev.filter((p) => p.id !== id))
+  const handleDeletePerson = (person) => {
+    if (window.confirm(`Delete ${person.name}?`)) {
+      personService.remove(person.id).then(() => {
+        setPersons((prev) => prev.filter((p) => p.id !== person.id))
       })
     }
   }
 
-  const handleAddPerson = (e) => {
-    e.preventDefault()
-
-    const newPerson = {
-      name: newName,
-      number: newNumber,
-    }
-
+  const createPerson = (newPerson) => {
     const existingPerson = persons.find(
-      (person) => person.name === newName.trim(),
+      (person) => person.name === newPerson.name.trim(),
     )
 
     if (existingPerson) {
       if (
         window.confirm(
-          `${newName} already exists in the phonebook, replace the old number with a new one?`,
+          `${newPerson.name} already exists in the phonebook, replace the old number with a new one?`,
         )
       ) {
         personService.update(existingPerson.id, newPerson).then((res) => {
           setPersons(persons.map((p) => (p.id !== existingPerson.id ? p : res)))
-          setNewName('')
-          setNewNumber('')
         })
       }
       return
-    } else if (persons.some((person) => person.number === newNumber.trim())) {
-      alert(`The number ${newNumber} already exists in the phonebook`)
+    } else if (
+      persons.some((person) => person.number === newPerson.number.trim())
+    ) {
+      alert(`The number ${newPerson.number} already exists in the phonebook`)
       return
     }
 
@@ -89,8 +77,6 @@ const App = () => {
       .create(newPerson)
       .then((res) => {
         setPersons(persons.concat(res))
-        setNewName('')
-        setNewNumber('')
       })
       .catch((error) => {
         console.log(error.response.data.error)
@@ -116,59 +102,6 @@ const App = () => {
     </div>
   )
 
-  const noteForm = () => (
-    <>
-      <form>
-        <h2>add a new</h2>
-        <div>
-          name:{' '}
-          <input onChange={(e) => setNewName(e.target.value)} value={newName} />
-        </div>
-        <div>
-          number:{' '}
-          <input
-            onChange={(e) => setNewNumber(e.target.value)}
-            value={newNumber}
-          />
-        </div>
-        <div>
-          <button onClick={handleAddPerson} type="submit">
-            add
-          </button>
-        </div>
-      </form>
-    </>
-  )
-
-  const loginForm = () => (
-    <>
-      <h2>Login</h2>
-      <form onSubmit={handleLogin}>
-        <div>
-          <label>
-            username
-            <input
-              type="text"
-              value={username}
-              onChange={({ target }) => setUsername(target.value)}
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            password
-            <input
-              type="password"
-              value={password}
-              onChange={({ target }) => setPassword(target.value)}
-            />
-          </label>
-        </div>
-        <button type="submit">login</button>
-      </form>
-    </>
-  )
-
   const filteredPersons = persons.filter((person) =>
     person.name.toLowerCase().includes(filterByName.toLowerCase()),
   )
@@ -177,11 +110,11 @@ const App = () => {
     <div>
       {errorMessage && errorDisplay()}
       <h1>Phonebook</h1>
-      {!user && loginForm()}
+      {!user && <LoginForm handleLogin={handleLogin} />}
       {user && (
         <div>
           <p>{user.name} logged in</p>
-          {noteForm()}
+          <AddPersonForm createPerson={createPerson} />
         </div>
       )}
       <h2>Numbers</h2>
@@ -194,12 +127,11 @@ const App = () => {
       </div>
       {filteredPersons.map((person) => {
         return (
-          <div key={person.id}>
-            {person.name} {person.number}{' '}
-            <button onClick={() => handleDeletePerson(person.id, person.name)}>
-              delete
-            </button>
-          </div>
+          <Person
+            key={person.id}
+            person={person}
+            handleDeletePerson={handleDeletePerson}
+          />
         )
       })}
     </div>
