@@ -7,8 +7,9 @@ const middleware = require('../utils/middleware')
 //
 
 // GET ALL PERSONS
-personsRouter.get('/', async (request, response) => {
-  const persons = await Person.find({}).populate('user', {
+personsRouter.get('/', middleware.authExtractor, async (request, response) => {
+  const user = request.user
+  const persons = await Person.find({ user: user._id }).populate('user', {
     username: 1,
     name: 1,
   })

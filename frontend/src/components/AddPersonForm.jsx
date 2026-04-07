@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const AddPersonForm = ({ createPerson }) => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
+
+  const navigate = useNavigate()
 
   const handleAddPerson = (e) => {
     e.preventDefault()
@@ -14,6 +17,7 @@ const AddPersonForm = ({ createPerson }) => {
 
     setNewName('')
     setNewNumber('')
+    navigate('/persons')
   }
 
   return (

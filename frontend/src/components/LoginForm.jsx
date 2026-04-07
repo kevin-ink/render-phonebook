@@ -7,6 +7,7 @@ const LoginForm = ({ handleLogin }) => {
   const onLoginClick = (e) => {
     e.preventDefault()
     handleLogin(username, password)
+    setPassword('')
   }
 
   return (

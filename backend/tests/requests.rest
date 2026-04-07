@@ -7,3 +7,13 @@ Content-Type: application/json
   "name": "Moogle Moggle",
   "password": "verysecurepassword"
 }
+
+### MAKE NEW USER 2
+POST http://localhost:3001/api/users HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "pizzahut",
+  "name": "Pizza Hut",
+  "password": "freepizza"
+}

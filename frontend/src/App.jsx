@@ -4,10 +4,15 @@ import loginService from './services/login'
 import Person from './components/Person'
 import LoginForm from './components/LoginForm'
 import AddPersonForm from './components/AddPersonForm'
+import Home from './components/Home'
+import Alert from './components/Alert'
+
+import { Routes, Route, Link, useMatch } from 'react-router-dom'
+import PersonList from './components/PersonList'
 
 const App = () => {
   const [persons, setPersons] = useState([])
-  const [errorMessage, setErrorMessage] = useState('')
+  const [notification, setNotification] = useState({ type: '', message: '' })
   const [user, setUser] = useState(() => {
     const loggedUserJSON = window.localStorage.getItem('loggedPhonebookAppUser')
     if (loggedUserJSON) {
@@ -17,29 +22,58 @@ const App = () => {
     }
     return null
   })
-  const [filterByName, setFilterByName] = useState('')
+
+  const match = useMatch('/persons/:id')
+  const person = match ? persons.find((p) => p.id === match.params.id) : null
 
   useEffect(() => {
-    personService.getAll().then((res) => {
-      setPersons(res)
-    })
-  }, [])
+    if (!user) return
 
-  const handleLogin = async (username, password) => {
-    try {
-      const user = await loginService.login({ username, password })
-      window.localStorage.setItem(
-        'loggedPhonebookAppUser',
-        JSON.stringify(user),
-      )
-      personService.setToken(user.token)
-      setUser(user)
-    } catch {
-      setErrorMessage('wrong credentials')
-      setTimeout(() => {
-        setErrorMessage('')
-      }, 5000)
-    }
+    personService
+      .getAll()
+      .then((initialPersons) => {
+        setPersons(initialPersons)
+      })
+      .catch((error) => {
+        console.log(error)
+        if (error.response?.status === 401) {
+          handleLogout()
+        } else {
+          setNotification({
+            type: 'error',
+            message: 'Failed to fetch persons: ' + error.message,
+          })
+          setTimeout(() => {
+            setNotification({ type: '', message: '' })
+          }, 5000)
+        }
+      })
+  }, [user])
+
+  const handleLogin = (username, password) => {
+    loginService
+      .login({ username, password })
+      .then((user) => {
+        window.localStorage.setItem(
+          'loggedPhonebookAppUser',
+          JSON.stringify(user),
+        )
+
+        personService.setToken(user.token)
+        setUser(user)
+      })
+      .catch(() => {
+        setNotification({ type: 'error', message: 'wrong credentials' })
+        setTimeout(() => {
+          setNotification({ type: '', message: '' })
+        }, 5000)
+      })
+  }
+
+  const handleLogout = () => {
+    window.localStorage.removeItem('loggedPhonebookAppUser')
+    personService.setToken(null)
+    setUser(null)
   }
 
   const handleDeletePerson = (person) => {
@@ -79,62 +113,70 @@ const App = () => {
         setPersons(persons.concat(res))
       })
       .catch((error) => {
-        console.log(error.response.data.error)
-        setErrorMessage('failed to create person: ' + error.response.data.error)
+        // console.log(error.response.data.error)
+        setNotification({
+          type: 'error',
+          message: 'failed to create person: ' + error.response.data.error,
+        })
         setTimeout(() => {
-          setErrorMessage('')
+          setNotification({ type: '', message: '' })
         }, 5000)
       })
   }
 
-  const errorDisplay = () => (
-    <div
-      style={{
-        color: 'red',
-        border: '2px solid red',
-        borderRadius: '4px',
-        padding: '10px',
-        marginBottom: '10px',
-        backgroundColor: '#ffe6e6',
-      }}
-    >
-      {errorMessage}
-    </div>
-  )
-
-  const filteredPersons = persons.filter((person) =>
-    person.name.toLowerCase().includes(filterByName.toLowerCase()),
-  )
+  const padding = {
+    padding: 5,
+  }
 
   return (
-    <div>
-      {errorMessage && errorDisplay()}
+    <>
+      <Alert type={notification.type} message={notification.message} />
       <h1>Phonebook</h1>
       {!user && <LoginForm handleLogin={handleLogin} />}
       {user && (
         <div>
           <p>{user.name} logged in</p>
-          <AddPersonForm createPerson={createPerson} />
+          <div>
+            <Link style={padding} to="/">
+              home
+            </Link>
+            <Link style={padding} to="/persons">
+              persons
+            </Link>
+            <Link style={padding} to="/create">
+              new person
+            </Link>
+          </div>
+
+          <Routes>
+            <Route
+              path="/persons/:id"
+              element={
+                <Person
+                  person={person}
+                  handleDeletePerson={handleDeletePerson}
+                />
+              }
+            />
+            <Route
+              path="/persons"
+              element={
+                <PersonList
+                  persons={persons}
+                  handleDeletePerson={handleDeletePerson}
+                />
+              }
+            />
+            <Route
+              path="/create"
+              element={<AddPersonForm createPerson={createPerson} />}
+            />
+            <Route path="/" element={<Home />} />
+          </Routes>
+          {/* <Footer /> */}
         </div>
       )}
-      <h2>Numbers</h2>
-      <div>
-        filter shown with{' '}
-        <input
-          onChange={(e) => setFilterByName(e.target.value)}
-          value={filterByName}
-        />
-      </div>
-      {filteredPersons.map((person) => {
-        return (
-          <Person
-            key={person.id}
-            person={person}
-            handleDeletePerson={handleDeletePerson}
-          />
-        )
-      })}
-    </div>
+    </>
   )
 }
 

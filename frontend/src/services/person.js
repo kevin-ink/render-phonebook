@@ -7,13 +7,12 @@ const setToken = (newToken) => {
 }
 
 const getAll = async () => {
-  let response
-  try {
-    response = await axios.get(baseUrl)
-    return response.data
-  } catch (error) {
-    console.error('Failed to fetch persons:', error)
+  const config = {
+    headers: { Authorization: token },
   }
+
+  const response = await axios.get(baseUrl, config)
+  return response.data
 }
 
 const create = async (newPerson) => {
@@ -30,12 +29,8 @@ const update = async (id, updatedPerson) => {
     headers: { Authorization: token },
   }
 
-  try {
-    const response = await axios.put(`${baseUrl}/${id}`, updatedPerson, config)
-    return response.data
-  } catch (error) {
-    console.error('Failed to update person:', error)
-  }
+  const response = await axios.put(`${baseUrl}/${id}`, updatedPerson, config)
+  return response.data
 }
 
 const remove = async (id) => {
@@ -43,13 +38,8 @@ const remove = async (id) => {
     headers: { Authorization: token },
   }
 
-  let response
-  try {
-    response = await axios.delete(`${baseUrl}/${id}`, config)
-    return response.data
-  } catch (error) {
-    console.error('Failed to delete person:', error)
-  }
+  const response = await axios.delete(`${baseUrl}/${id}`, config)
+  return response.data
 }
 
 export default {
